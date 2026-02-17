@@ -56,17 +56,37 @@ export function FileUpload({ files, onFilesChange, disabled }: FileUploadProps) 
           disabled={disabled}
           aria-label="Upload FASTA genome files"
         />
-        <div className="file-upload-label">
-          {files.length === 0
-            ? 'Drop FASTA files here or click to browse (.fasta, .fa, .gz)'
-            : `${files.length} file(s) selected`}
-        </div>
-        {files.length > 0 && (
-          <ul className="file-list">
-            {files.map((f) => (
-              <li key={f.name}>{f.name}</li>
-            ))}
-          </ul>
+        <svg
+          className="file-upload-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="17 8 12 3 7 8" />
+          <line x1="12" y1="3" x2="12" y2="15" />
+        </svg>
+        {files.length === 0 ? (
+          <>
+            <div className="file-upload-label">
+              Drop FASTA files here or click to browse
+            </div>
+            <div className="file-upload-hint">.fasta, .fa, .fna, .fsa, .gz</div>
+          </>
+        ) : (
+          <>
+            <div className="file-upload-label">
+              {files.length} file(s) selected
+            </div>
+            <ul className="file-list">
+              {files.map((f) => (
+                <li key={f.name}>{f.name}</li>
+              ))}
+            </ul>
+          </>
         )}
       </label>
     </div>

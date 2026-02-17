@@ -23,12 +23,12 @@ export function ResultsTable({ results, loci }: ResultsTableProps) {
         <tbody>
           {results.map((r) => (
             <tr key={r.filename}>
-              <td>{r.filename}</td>
+              <td className="filename-cell">{r.filename}</td>
               <td
                 className={`st-cell st-${classifyResult(r.st)}`}
                 title={statusLabel(r.st)}
               >
-                {r.st}
+                <span className="badge">{r.st}</span>
               </td>
               {loci.map((l) => {
                 const val = r.alleles[l]
@@ -38,7 +38,7 @@ export function ResultsTable({ results, loci }: ResultsTableProps) {
                     className={`allele-cell allele-${classifyResult(val)}`}
                     title={statusLabel(val)}
                   >
-                    {val ?? '-'}
+                    {val ? <span className="badge">{val}</span> : '-'}
                   </td>
                 )
               })}

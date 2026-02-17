@@ -51,28 +51,30 @@ describe('ResultsTable', () => {
 
   it('applies correct CSS class for exact match', () => {
     render(<ResultsTable results={[results[0]]} loci={loci} />)
-    const stCell = screen.getByText('152')
-    expect(stCell.className).toContain('st-exact')
+    const badge = screen.getByText('152')
+    const td = badge.closest('td')!
+    expect(td.className).toContain('st-exact')
   })
 
   it('applies correct CSS class for novel', () => {
     render(<ResultsTable results={[results[1]]} loci={loci} />)
     const novelCells = screen.getAllByText('novel')
-    const stCell = novelCells.find((el) => el.className.includes('st-cell'))
-    expect(stCell).toBeDefined()
-    expect(stCell!.className).toContain('st-novel')
+    const td = novelCells[0].closest('td')!
+    expect(td.className).toContain('st-novel')
   })
 
   it('applies correct CSS class for incomplete/no_hit', () => {
     render(<ResultsTable results={[results[2]]} loci={loci} />)
-    const stCell = screen.getByText('incomplete')
-    expect(stCell.className).toContain('st-nohit')
+    const badge = screen.getByText('incomplete')
+    const td = badge.closest('td')!
+    expect(td.className).toContain('st-nohit')
   })
 
   it('adds title attributes for accessibility', () => {
     render(<ResultsTable results={[results[0]]} loci={loci} />)
-    const stCell = screen.getByText('152')
-    expect(stCell).toHaveAttribute('title', 'Exact match: 152')
+    const badge = screen.getByText('152')
+    const td = badge.closest('td')!
+    expect(td).toHaveAttribute('title', 'Exact match: 152')
   })
 
   it('shows dash for missing alleles', () => {

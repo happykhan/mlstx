@@ -118,7 +118,7 @@ function App() {
       <main className="app-main">
         {currentView === 'mlst' ? (
           <>
-            <section className="controls">
+            <div className="controls">
               <FileUpload
                 files={files}
                 onFilesChange={setFiles}
@@ -138,7 +138,7 @@ function App() {
               >
                 {running ? 'Running...' : 'Run MLST'}
               </button>
-            </section>
+            </div>
 
             {running && (
               <section className="progress" aria-live="polite">

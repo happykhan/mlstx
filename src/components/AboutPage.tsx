@@ -11,11 +11,23 @@ export function AboutPage() {
           </a>{' '}
           to align alleles against bacterial genomes entirely in your browser.
         </p>
-        <p>
-          No data leaves your machine — all processing happens client-side. Upload
-          your genome assemblies, select an MLST scheme, and get sequence type
-          assignments in seconds.
-        </p>
+        <div className="privacy-note">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          </svg>
+          <p>
+            No data leaves your machine — all processing happens client-side.
+            Upload your genome assemblies, select an MLST scheme, and get
+            sequence type assignments in seconds.
+          </p>
+        </div>
       </section>
 
       <section>
@@ -26,13 +38,7 @@ export function AboutPage() {
           University of Oxford
         </p>
         <p>
-          Nabil-Fareed Alikhan works with David Aanensen at the Centre for Genomic
-          Pathogen Surveillance. He previously served as Interim Head of Informatics
-          at the Quadram Institute Bioscience and held a Senior Research Fellow
-          position with Mark Achtman at the University of Warwick. He holds a PhD
-          (2015) from the University of Queensland, supervised by Scott Beatson,
-          along with dual undergraduate degrees in Information Technology and
-          Science (2008).
+          Bioinformatics researcher and software developer specialising in microbial genomics. I build widely used open-source tools, publish peer-reviewed research, and co-host the MicroBinfie podcast. My work is recognised across the bacterial genomics community for its focus on practical, open science.
         </p>
         <div className="about-links">
           <a
