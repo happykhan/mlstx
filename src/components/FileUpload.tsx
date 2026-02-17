@@ -54,6 +54,7 @@ export function FileUpload({ files, onFilesChange, disabled }: FileUploadProps) 
           accept=".fasta,.fa,.fna,.fsa,.fasta.gz,.fa.gz,.fna.gz,.fsa.gz,.gz"
           onChange={handleChange}
           disabled={disabled}
+          aria-label="Upload FASTA genome files"
         />
         <div className="file-upload-label">
           {files.length === 0

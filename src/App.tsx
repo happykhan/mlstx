@@ -141,8 +141,15 @@ function App() {
             </section>
 
             {running && (
-              <section className="progress">
-                <div className="progress-bar">
+              <section className="progress" aria-live="polite">
+                <div
+                  className="progress-bar"
+                  role="progressbar"
+                  aria-valuenow={Math.round(progressPct)}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label="MLST analysis progress"
+                >
                   <div
                     className="progress-fill"
                     style={{ width: `${progressPct}%` }}
@@ -153,7 +160,7 @@ function App() {
             )}
 
             {error && (
-              <section className="error">
+              <section className="error" role="alert">
                 <p>{error}</p>
               </section>
             )}

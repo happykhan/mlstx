@@ -24,15 +24,24 @@ export function ResultsTable({ results, loci }: ResultsTableProps) {
           {results.map((r) => (
             <tr key={r.filename}>
               <td>{r.filename}</td>
-              <td className={`st-cell st-${classifyResult(r.st)}`}>{r.st}</td>
-              {loci.map((l) => (
-                <td
-                  key={l}
-                  className={`allele-cell allele-${classifyResult(r.alleles[l])}`}
-                >
-                  {r.alleles[l] ?? '-'}
-                </td>
-              ))}
+              <td
+                className={`st-cell st-${classifyResult(r.st)}`}
+                title={statusLabel(r.st)}
+              >
+                {r.st}
+              </td>
+              {loci.map((l) => {
+                const val = r.alleles[l]
+                return (
+                  <td
+                    key={l}
+                    className={`allele-cell allele-${classifyResult(val)}`}
+                    title={statusLabel(val)}
+                  >
+                    {val ?? '-'}
+                  </td>
+                )
+              })}
             </tr>
           ))}
         </tbody>
@@ -46,6 +55,14 @@ function classifyResult(val: string | undefined): string {
   if (val === 'no_hit' || val === 'incomplete') return 'nohit'
   if (val === 'novel') return 'novel'
   return 'exact'
+}
+
+function statusLabel(val: string | undefined): string {
+  if (!val) return 'Missing'
+  if (val === 'no_hit') return 'No hit found'
+  if (val === 'incomplete') return 'Incomplete — missing loci'
+  if (val === 'novel') return 'Novel — above threshold but not exact'
+  return `Exact match: ${val}`
 }
 
 export function exportCSV(results: MLSTResult[], loci: string[]): void {
