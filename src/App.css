@@ -179,6 +179,8 @@
   flex-wrap: wrap;
   gap: 0.4rem;
   justify-content: center;
+  max-height: 5.5rem;
+  overflow-y: auto;
 }
 
 .file-list li {
