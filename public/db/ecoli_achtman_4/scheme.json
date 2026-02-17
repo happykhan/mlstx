@@ -1,0 +1,12 @@
+{
+  "name": "ecoli_achtman_4",
+  "loci": [
+    "adk",
+    "fumC",
+    "gyrB",
+    "icd",
+    "mdh",
+    "purA",
+    "recA"
+  ]
+}

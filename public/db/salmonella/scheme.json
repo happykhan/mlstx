@@ -1,0 +1,12 @@
+{
+  "name": "salmonella",
+  "loci": [
+    "aroC",
+    "dnaN",
+    "hemD",
+    "hisD",
+    "purE",
+    "sucA",
+    "thrA"
+  ]
+}

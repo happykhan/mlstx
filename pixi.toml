@@ -1,0 +1,9 @@
+[project]
+name = "mlstx-benchmark"
+channels = ["conda-forge", "bioconda"]
+platforms = ["osx-arm64", "osx-64", "linux-64"]
+
+[dependencies]
+python = ">=3.10"
+minimap2 = ">=2.22"
+mlst = ">=2.23"

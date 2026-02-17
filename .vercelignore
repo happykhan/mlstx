@@ -1,0 +1,7 @@
+.pixi/
+node_modules/
+test_data/
+scripts/
+*.md
+pixi.toml
+pixi.lock
