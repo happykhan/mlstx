@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Multi-locus mafft alignment test</title>
+  <script src="https://biowasm.com/cdn/v3/aioli.js"></script>
+  <style>
+    body { font-family: monospace; padding: 2rem; background: #fff; color: #222; }
+    h1 { color: #333; }
+    .step { margin: 0.5rem 0; padding: 0.5rem; border-left: 3px solid #ccc; }
+    .step.ok { border-left-color: #4caf50; }
+    .step.err { border-left-color: #c62828; }
+    pre { background: #f5f5f5; padding: 0.5rem; overflow-x: auto; max-height: 200px; font-size: 0.8rem; }
+    button { padding: 0.5rem 1rem; margin: 0.5rem; cursor: pointer; font-size: 1rem; }
+    .active { background: #4caf50; color: white; }
+  </style>
+</head>
+<body>
+  <h1>Multi-locus tbfast alignment test</h1>
+  <p>Tests running tbfast multiple times in the same Aioli instance.</p>
+  <div>
+    <button id="btn-reinit-true" onclick="runTest(true)">Test with reinit: true</button>
+    <button id="btn-reinit-false" onclick="runTest(false)">Test with reinit: false</button>
+    <button id="btn-new-aioli" onclick="runTestNewAioli()">Test with new Aioli per locus</button>
+  </div>
+  <div id="log"></div>
+
+  <script>
+    const logEl = document.getElementById('log');
+
+    // 3 different "loci" with different sequences
+    const loci = [
+      {
+        name: 'locusA',
+        fasta: '>seq1\nATCGATCGATCGATCGATCG\n>seq2\nATCGATCGATCGATCGAAAA\n>seq3\nGGCGATCGATCGATCGATCG\n',
+      },
+      {
+        name: 'locusB',
+        fasta: '>seq1\nTTTTAAAACCCCGGGGATAT\n>seq2\nTTTTAAAACCCCGGGGGGGG\n>seq3\nAAAAAAAACCCCGGGGATAT\n',
+      },
+      {
+        name: 'locusC',
+        fasta: '>seq1\nGCGCGCGCGCATATATATAT\n>seq2\nGCGCGCGCGCATATATCCCC\n>seq3\nGCGCGCGCGCGGGGATATAT\n',
+      },
+    ];
+
+    const TBFAST_PARAMS = '_ -u 0.0 -l 2.7 -C 0 -b 62 -g 0.0 -f -2.00 -Q 100.0 -h 0.0 -O -6.00 -E -0.000 -N -Z _ -+ 16 -W 0.00001 -V -1.53 -s 0.0 -O -C 0 -b 62 -f -1.53 -Q 100.0 -h 0.000 -l 2.7 -X 0.1';
+
+    function step(id, msg, status) {
+      let el = document.getElementById(id);
+      if (!el) {
+        el = document.createElement('div');
+        el.id = id;
+        el.className = 'step';
+        logEl.appendChild(el);
+      }
+      el.className = 'step ' + (status || '');
+      el.innerHTML = msg;
+    }
+
+    function getStdout(result) {
+      if (typeof result === 'string') return result;
+      if (result && typeof result === 'object' && result.stdout !== undefined) return result.stdout;
+      return String(result);
+    }
+
+    async function runTest(reinitValue) {
+      logEl.innerHTML = '';
+      step('mode', `<b>Mode: reinit=${reinitValue}</b> — Single Aioli instance, running tbfast ${loci.length} times`, '');
+
+      try {
+        step('init', 'Initializing Aioli...');
+        const cli = await new Aioli([
+          'coreutils/cat/8.32',
+          { tool: 'mafft', version: '7.520', program: 'tbfast', reinit: reinitValue },
+          'fasttree/2.1.11',
+        ], { printInterleaved: false });
+        step('init', 'Aioli initialized', 'ok');
+
+        for (let i = 0; i < loci.length; i++) {
+          const locus = loci[i];
+          const sid = 'locus' + i;
+
+          step(sid, `[${locus.name}] Mounting input...`);
+          const inputName = `locus_${locus.name}.fasta`;
+          await cli.mount({ name: inputName, data: locus.fasta });
+
+          // Clean up temp files
+          for (const f of ['pre', 'hat2', 'hat3', 'order']) {
+            try { await cli.fs('unlink', '/shared/data/' + f); } catch(e) {}
+          }
+
+          step(sid, `[${locus.name}] Running tbfast...`);
+          const result = await cli.exec(`tbfast ${TBFAST_PARAMS} -i ${inputName}`);
+          const stderr = typeof result === 'object' && result.stderr ? result.stderr : '';
+
+          step(sid, `[${locus.name}] Reading /shared/data/pre...`);
+          const aligned = getStdout(await cli.exec('cat /shared/data/pre'));
+
+          const seqCount = (aligned.match(/>/g) || []).length;
+          const ok = seqCount === 3;
+          step(sid, `[${locus.name}] ${ok ? 'OK' : 'FAIL'}: ${seqCount} sequences aligned<pre>${aligned.slice(0, 500) || '(empty)'}</pre><details><summary>stderr</summary><pre>${stderr.slice(-500)}</pre></details>`, ok ? 'ok' : 'err');
+        }
+
+        step('done', '<b>Test complete</b>', '');
+      } catch(err) {
+        step('error', `<b>ERROR:</b> <pre>${err.message}\n${err.stack}</pre>`, 'err');
+      }
+    }
+
+    async function runTestNewAioli() {
+      logEl.innerHTML = '';
+      step('mode', '<b>Mode: New Aioli per locus</b>', '');
+
+      try {
+        for (let i = 0; i < loci.length; i++) {
+          const locus = loci[i];
+          const sid = 'locus' + i;
+
+          step(sid, `[${locus.name}] Creating new Aioli instance...`);
+          const cli = await new Aioli([
+            'coreutils/cat/8.32',
+            { tool: 'mafft', version: '7.520', program: 'tbfast', reinit: false },
+          ], { printInterleaved: false });
+
+          const inputName = `input.fasta`;
+          await cli.mount({ name: inputName, data: locus.fasta });
+
+          step(sid, `[${locus.name}] Running tbfast...`);
+          await cli.exec(`tbfast ${TBFAST_PARAMS} -i ${inputName}`);
+
+          step(sid, `[${locus.name}] Reading /shared/data/pre...`);
+          const aligned = getStdout(await cli.exec('cat /shared/data/pre'));
+
+          const seqCount = (aligned.match(/>/g) || []).length;
+          const ok = seqCount === 3;
+          step(sid, `[${locus.name}] ${ok ? 'OK' : 'FAIL'}: ${seqCount} sequences aligned<pre>${aligned.slice(0, 500) || '(empty)'}</pre>`, ok ? 'ok' : 'err');
+        }
+
+        step('done', '<b>Test complete</b>', '');
+      } catch(err) {
+        step('error', `<b>ERROR:</b> <pre>${err.message}\n${err.stack}</pre>`, 'err');
+      }
+    }
+  </script>
+</body>
+</html>
