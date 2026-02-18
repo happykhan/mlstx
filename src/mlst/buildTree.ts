@@ -81,7 +81,9 @@ export async function buildTree(
   const filenames = results.map((r) => r.filename)
 
   onProgress('Initializing mafft and FastTree...', 0)
-  const cli = await new Aioli(['mafft/7.520', 'fasttree/2.1.11'])
+  const cli = await new Aioli(['mafft/7.520', 'fasttree/2.1.11'], {
+    printInterleaved: false,
+  })
 
   onProgress('Computing allele lengths...', 5)
   const medianLengths = computeMedianLengths(loci, schemeData.alleleFastas)
@@ -111,7 +113,9 @@ export async function buildTree(
     // Mount input and run mafft
     const inputName = `locus_${locus}.fasta`
     await cli.mount({ name: inputName, data: inputFasta })
-    const alignedFasta = await cli.exec(`mafft --auto ${inputName}`)
+    const mafftResult = await cli.exec(`mafft --auto ${inputName}`)
+    const alignedFasta =
+      typeof mafftResult === 'string' ? mafftResult : mafftResult.stdout
 
     // Parse the aligned output
     const alignedContigs = parseFastaString(alignedFasta)
@@ -137,7 +141,8 @@ export async function buildTree(
   // Run FastTree
   onProgress('Building phylogenetic tree...', 80)
   await cli.mount({ name: 'concat.fasta', data: concatenatedFasta })
-  const newick = await cli.exec('fasttree -nt concat.fasta')
+  const ftResult = await cli.exec('fasttree -nt concat.fasta')
+  const newick = typeof ftResult === 'string' ? ftResult : ftResult.stdout
 
   onProgress('Tree complete', 100)
   return newick.trim()
