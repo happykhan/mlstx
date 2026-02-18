@@ -651,10 +651,34 @@
   color: var(--color-text);
 }
 
+.log-header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 .log-count {
   font-size: 0.8rem;
   color: var(--color-text-muted);
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+.copy-log-button {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg-secondary);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.copy-log-button:hover {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
 }
 
 .log-body {

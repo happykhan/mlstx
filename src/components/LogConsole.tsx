@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useCallback, useState } from 'react'
 
 interface LogConsoleProps {
   lines: string[]
@@ -6,9 +6,18 @@ interface LogConsoleProps {
 
 export function LogConsole({ lines }: LogConsoleProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [lines])
+
+  const handleCopy = useCallback(() => {
+    const text = lines.join('\n')
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
   }, [lines])
 
   if (lines.length === 0) return null
@@ -17,7 +26,12 @@ export function LogConsole({ lines }: LogConsoleProps) {
     <section className="log-console">
       <div className="log-header">
         <h2>Log</h2>
-        <span className="log-count">{lines.length} entries</span>
+        <div className="log-header-right">
+          <span className="log-count">{lines.length} entries</span>
+          <button className="copy-log-button" onClick={handleCopy}>
+            {copied ? 'Copied!' : 'Copy Log'}
+          </button>
+        </div>
       </div>
       <div className="log-body">
         {lines.map((line, i) => (

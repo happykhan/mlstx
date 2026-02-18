@@ -77,18 +77,16 @@ function getStdout(result: unknown): string {
   return String(result)
 }
 
-// mafft E-INS-i mode parameters (from biowasm docs)
+// mafft tbfast parameters (E-INS-i mode, from biowasm docs)
 const TBFAST_PARAMS =
   '_ -u 0.0 -l 2.7 -C 0 -b 62 -g 0.0 -f -2.00 -Q 100.0 -h 0.0 -O -6.00 -E -0.000 -N -Z _ -+ 16 -W 0.00001 -V -1.53 -s 0.0 -O -C 0 -b 62 -f -1.53 -Q 100.0 -h 0.000 -l 2.7 -X 0.1'
-const DVTDITR_PARAMS =
-  '-W 0.00001 -E 0.0 -s 0.0 -C 0 -t 0 -F -l 2.7 -z 50 -b 62 -f -1.53 -Q 100.0 -h 0.000 -I 16 -X 0.1 -p BAATARI2 -K 0'
 
 /**
  * Build a phylogenetic tree from MLST results.
  *
  * Pipeline:
  * 1. Extract allele sequences for each genome per locus
- * 2. Run mafft (tbfast + dvtditr) per locus for multiple sequence alignment
+ * 2. Run mafft (tbfast) per locus for multiple sequence alignment
  * 3. Concatenate per-locus alignments into a super-alignment
  * 4. Run FastTree on the concatenated alignment
  * 5. Return the Newick tree string
@@ -113,7 +111,7 @@ export async function buildTree(
   log(`Genomes: ${results.length}, Loci: ${loci.length}`)
 
   onProgress('Initializing mafft and FastTree...', 0)
-  log('Loading biowasm modules: mafft (tbfast, dvtditr), fasttree, coreutils/cat')
+  log('Loading biowasm modules: mafft (tbfast), fasttree, coreutils/cat')
   const cli = await new Aioli(
     [
       'coreutils/cat/8.32',
@@ -121,12 +119,6 @@ export async function buildTree(
         tool: 'mafft',
         version: mafftVersion,
         program: 'tbfast',
-        reinit: false,
-      },
-      {
-        tool: 'mafft',
-        version: mafftVersion,
-        program: 'dvtditr',
         reinit: false,
       },
       'fasttree/2.1.11',
@@ -160,30 +152,27 @@ export async function buildTree(
     }
     const inputFasta = inputLines.join('\n') + '\n'
 
-    // Mount input and run mafft alignment (E-INS-i mode)
+    // Mount input and run mafft alignment
     const inputName = `locus_${locus}.fasta`
     await cli.mount({ name: inputName, data: inputFasta })
 
-    // Clean up /shared/data/pre from previous locus run
-    try {
-      await cli.fs('unlink', '/shared/data/pre')
-    } catch {
-      // File may not exist on first run — that's fine
+    // Clean up mafft temp files from previous locus run
+    for (const tmpFile of ['pre', 'hat2', 'hat3', 'order']) {
+      try {
+        await cli.fs('unlink', `/shared/data/${tmpFile}`)
+      } catch {
+        // File may not exist — that's fine
+      }
     }
 
-    // tbfast: initial alignment → writes to /shared/data/pre
+    // tbfast: alignment → writes to /shared/data/pre
     log(`[${locus}] Running tbfast...`)
     const tbResult = await cli.exec(`tbfast ${TBFAST_PARAMS} -i ${inputName}`)
     const tbStderr = typeof tbResult === 'object' && tbResult.stderr ? tbResult.stderr : ''
-    if (tbStderr) log(`[${locus}] tbfast stderr: ${tbStderr.slice(0, 200)}`)
+    if (tbStderr) log(`[${locus}] tbfast stderr (last 300): ${tbStderr.slice(-300)}`)
 
-    // dvtditr: iterative refinement → reads/writes /shared/data/pre
-    log(`[${locus}] Running dvtditr (iterative refinement)...`)
-    const dvResult = await cli.exec(`dvtditr ${DVTDITR_PARAMS} -i /shared/data/pre`)
-    const dvStderr = typeof dvResult === 'object' && dvResult.stderr ? dvResult.stderr : ''
-    if (dvStderr) log(`[${locus}] dvtditr stderr: ${dvStderr.slice(0, 200)}`)
-
-    // Read aligned output
+    // Read aligned output directly from tbfast (skip dvtditr —
+    // iterative refinement is unnecessary for near-identical MLST alleles)
     log(`[${locus}] Reading aligned output...`)
     const alignedFasta = getStdout(await cli.exec('cat /shared/data/pre'))
 
