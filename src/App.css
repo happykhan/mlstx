@@ -564,6 +564,69 @@
   color: var(--color-text-secondary);
 }
 
+/* ── Results actions ─────────────────────────── */
+.results-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+/* ── Build Tree button ──────────────────────── */
+.tree-button {
+  padding: 0.45rem 1rem;
+  background: var(--gradient-primary);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tree-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(13, 148, 136, 0.3);
+}
+
+.tree-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* ── Tree section ───────────────────────────── */
+.tree-section {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+  box-shadow: 0 1px 3px var(--color-shadow);
+}
+
+.tree-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.tree-header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.tree-container {
+  width: 100%;
+  height: 500px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+}
+
 /* ── Footer ──────────────────────────────────── */
 .app-footer {
   margin-top: 3rem;

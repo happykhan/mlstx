@@ -6,7 +6,9 @@ import { AboutPage } from './components/AboutPage'
 import { fetchSchemeList, loadSchemeData } from './mlst/loadScheme'
 import { parseFastaFile } from './mlst/parseFasta'
 import { runMLST } from './mlst/align'
-import type { MLSTResult } from './mlst/types'
+import { buildTree } from './mlst/buildTree'
+import { PhyloTree } from './components/PhyloTree'
+import type { MLSTResult, SchemeData } from './mlst/types'
 import './App.css'
 
 type Theme = 'light' | 'dark'
@@ -22,7 +24,15 @@ function App() {
   const [progressPct, setProgressPct] = useState(0)
   const [results, setResults] = useState<MLSTResult[]>([])
   const [loci, setLoci] = useState<string[]>([])
+  const [schemeData, setSchemeData] = useState<SchemeData | null>(null)
   const [error, setError] = useState('')
+
+  // Tree state
+  const [newick, setNewick] = useState('')
+  const [treeBuilding, setTreeBuilding] = useState(false)
+  const [treeProgress, setTreeProgress] = useState('')
+  const [treeProgressPct, setTreeProgressPct] = useState(0)
+  const [treeError, setTreeError] = useState('')
 
   const [theme, setTheme] = useState<Theme>(() => {
     return (localStorage.getItem('mlstx-theme') as Theme) || 'light'
@@ -53,19 +63,22 @@ function App() {
     setRunning(true)
     setError('')
     setResults([])
+    setNewick('')
+    setTreeError('')
     setProgress('Loading scheme data...')
     setProgressPct(0)
 
     try {
-      const schemeData = await loadSchemeData(selectedScheme)
-      setLoci(schemeData.scheme.loci)
+      const data = await loadSchemeData(selectedScheme)
+      setSchemeData(data)
+      setLoci(data.scheme.loci)
 
       setProgress('Parsing FASTA files...')
       const parsedFiles = await Promise.all(files.map(parseFastaFile))
 
       const mlstResults = await runMLST(
         parsedFiles,
-        schemeData,
+        data,
         (msg, pct) => {
           setProgress(msg)
           setProgressPct(pct)
@@ -80,6 +93,27 @@ function App() {
       setRunning(false)
     }
   }, [files, selectedScheme])
+
+  const handleBuildTree = useCallback(async () => {
+    if (!schemeData || results.length < 2) return
+
+    setTreeBuilding(true)
+    setTreeError('')
+    setNewick('')
+
+    try {
+      const newickStr = await buildTree(results, schemeData, (msg, pct) => {
+        setTreeProgress(msg)
+        setTreeProgressPct(pct)
+      })
+      setNewick(newickStr)
+      setTreeProgress('')
+    } catch (err) {
+      setTreeError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setTreeBuilding(false)
+    }
+  }, [results, schemeData])
 
   const canRun = files.length > 0 && selectedScheme !== '' && !running
 
@@ -169,16 +203,54 @@ function App() {
               <section className="results">
                 <div className="results-header">
                   <h2>Results</h2>
-                  <button
-                    className="export-button"
-                    onClick={() => exportCSV(results, loci)}
-                  >
-                    Export CSV
-                  </button>
+                  <div className="results-actions">
+                    <button
+                      className="export-button"
+                      onClick={() => exportCSV(results, loci)}
+                    >
+                      Export CSV
+                    </button>
+                    {results.length >= 2 && (
+                      <button
+                        className="tree-button"
+                        onClick={handleBuildTree}
+                        disabled={treeBuilding}
+                      >
+                        {treeBuilding ? 'Building...' : 'Build Tree'}
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <ResultsTable results={results} loci={loci} />
               </section>
             )}
+
+            {treeBuilding && (
+              <section className="progress" aria-live="polite">
+                <div
+                  className="progress-bar"
+                  role="progressbar"
+                  aria-valuenow={Math.round(treeProgressPct)}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label="Tree building progress"
+                >
+                  <div
+                    className="progress-fill"
+                    style={{ width: `${treeProgressPct}%` }}
+                  />
+                </div>
+                <p className="progress-text">{treeProgress}</p>
+              </section>
+            )}
+
+            {treeError && (
+              <section className="error" role="alert">
+                <p>{treeError}</p>
+              </section>
+            )}
+
+            {newick && <PhyloTree newick={newick} />}
           </>
         ) : (
           <AboutPage />
