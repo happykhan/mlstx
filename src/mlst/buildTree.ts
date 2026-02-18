@@ -105,18 +105,12 @@ export async function buildTree(
   log('Starting tree building pipeline')
   log(`Genomes: ${results.length}, Loci: ${loci.length}`)
 
-  onProgress('Initializing muscle and FastTree...', 0)
-  log('Loading biowasm modules: muscle/5.1.0, fasttree/2.1.11')
-  const cli = await new Aioli(
-    ['muscle/5.1.0', 'fasttree/2.1.11'],
-    { printInterleaved: false },
-  )
-  log('Aioli initialized successfully')
-
   onProgress('Computing allele lengths...', 5)
   const medianLengths = computeMedianLengths(loci, schemeData.alleleFastas)
 
   // Per-locus extraction and alignment
+  // Each locus gets a fresh Aioli instance because WASM modules (muscle, mafft)
+  // cannot be called more than once — their global state doesn't reset on re-entry.
   const alignedPerLocus: Record<string, Record<string, string>> = {}
 
   for (let li = 0; li < loci.length; li++) {
@@ -138,13 +132,18 @@ export async function buildTree(
     }
     const inputFasta = inputLines.join('\n') + '\n'
 
-    // Mount input and run muscle alignment
-    const inputName = `locus_${locus}.fasta`
-    const outputName = `aligned_${locus}.fasta`
-    await cli.mount({ name: inputName, data: inputFasta })
+    // Fresh Aioli per locus (WASM binary is browser-cached after first load)
+    log(`[${locus}] Initializing muscle...`)
+    const muscleCli = await new Aioli(['muscle/5.1.0'], {
+      printInterleaved: false,
+    })
+
+    const inputName = 'input.fasta'
+    const outputName = 'aligned.fasta'
+    await muscleCli.mount({ name: inputName, data: inputFasta })
 
     log(`[${locus}] Running muscle...`)
-    const muscleResult = await cli.exec(
+    const muscleResult = await muscleCli.exec(
       `muscle -align ${inputName} -output ${outputName}`,
     )
     const muscleStderr =
@@ -152,14 +151,16 @@ export async function buildTree(
         ? muscleResult.stderr
         : ''
     if (muscleStderr)
-      log(`[${locus}] muscle stderr (last 300): ${muscleStderr.slice(-300)}`)
+      log(`[${locus}] muscle stderr (last 200): ${muscleStderr.slice(-200)}`)
 
     // Read aligned output
     log(`[${locus}] Reading aligned output...`)
-    const alignedFasta = await cli.cat(outputName)
+    const alignedFasta = await muscleCli.cat(outputName)
 
     // Parse the aligned output
-    const alignedContigs = parseFastaString(alignedFasta)
+    const alignedContigs = parseFastaString(
+      typeof alignedFasta === 'string' ? alignedFasta : String(alignedFasta),
+    )
     log(
       `[${locus}] Aligned ${alignedContigs.length} sequences (length: ${alignedContigs[0]?.sequence.length ?? 0})`,
     )
@@ -185,11 +186,15 @@ export async function buildTree(
   const totalLen = concatLines[1]?.length ?? 0
   log(`Concatenated alignment: ${filenames.length} sequences x ${totalLen} bp`)
 
-  // Run FastTree
+  // Run FastTree (separate Aioli instance)
   onProgress('Building phylogenetic tree...', 80)
+  log('Initializing FastTree...')
+  const ftCli = await new Aioli(['fasttree/2.1.11'], {
+    printInterleaved: false,
+  })
   log('Running FastTree (-nt) on concatenated alignment...')
-  await cli.mount({ name: 'concat.fasta', data: concatenatedFasta })
-  const ftResult = await cli.exec('fasttree -nt concat.fasta')
+  await ftCli.mount({ name: 'concat.fasta', data: concatenatedFasta })
+  const ftResult = await ftCli.exec('fasttree -nt concat.fasta')
   const newick = getStdout(ftResult)
   log(`FastTree complete. Newick length: ${newick.trim().length} chars`)
 
