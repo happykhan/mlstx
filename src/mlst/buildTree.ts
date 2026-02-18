@@ -59,11 +59,30 @@ export function getSequenceForAllele(
 }
 
 /**
+ * Extract stdout from an Aioli exec result.
+ * With printInterleaved: false, exec returns { stdout, stderr }.
+ * With printInterleaved: true (default), exec returns a string.
+ */
+function getStdout(result: unknown): string {
+  if (typeof result === 'string') return result
+  if (result && typeof result === 'object' && 'stdout' in result) {
+    return (result as { stdout: string }).stdout
+  }
+  return String(result)
+}
+
+// mafft E-INS-i mode parameters (from biowasm docs)
+const TBFAST_PARAMS =
+  '_ -u 0.0 -l 2.7 -C 0 -b 62 -g 0.0 -f -2.00 -Q 100.0 -h 0.0 -O -6.00 -E -0.000 -N -Z _ -+ 16 -W 0.00001 -V -1.53 -s 0.0 -O -C 0 -b 62 -f -1.53 -Q 100.0 -h 0.000 -l 2.7 -X 0.1'
+const DVTDITR_PARAMS =
+  '-W 0.00001 -E 0.0 -s 0.0 -C 0 -t 0 -F -l 2.7 -z 50 -b 62 -f -1.53 -Q 100.0 -h 0.000 -I 16 -X 0.1 -p BAATARI2 -K 0'
+
+/**
  * Build a phylogenetic tree from MLST results.
  *
  * Pipeline:
  * 1. Extract allele sequences for each genome per locus
- * 2. Run mafft per locus for multiple sequence alignment
+ * 2. Run mafft (tbfast + dvtditr) per locus for multiple sequence alignment
  * 3. Concatenate per-locus alignments into a super-alignment
  * 4. Run FastTree on the concatenated alignment
  * 5. Return the Newick tree string
@@ -79,11 +98,28 @@ export async function buildTree(
 
   const loci = schemeData.scheme.loci
   const filenames = results.map((r) => r.filename)
+  const mafftVersion = '7.520'
 
   onProgress('Initializing mafft and FastTree...', 0)
-  const cli = await new Aioli(['mafft/7.520', 'fasttree/2.1.11'], {
-    printInterleaved: false,
-  })
+  const cli = await new Aioli(
+    [
+      'coreutils/cat/8.32',
+      {
+        tool: 'mafft',
+        version: mafftVersion,
+        program: 'tbfast',
+        reinit: false,
+      },
+      {
+        tool: 'mafft',
+        version: mafftVersion,
+        program: 'dvtditr',
+        reinit: false,
+      },
+      'fasttree/2.1.11',
+    ],
+    { printInterleaved: false },
+  )
 
   onProgress('Computing allele lengths...', 5)
   const medianLengths = computeMedianLengths(loci, schemeData.alleleFastas)
@@ -110,12 +146,16 @@ export async function buildTree(
     }
     const inputFasta = inputLines.join('\n') + '\n'
 
-    // Mount input and run mafft
+    // Mount input and run mafft alignment (E-INS-i mode)
     const inputName = `locus_${locus}.fasta`
     await cli.mount({ name: inputName, data: inputFasta })
-    const mafftResult = await cli.exec(`mafft --auto ${inputName}`)
-    const alignedFasta =
-      typeof mafftResult === 'string' ? mafftResult : mafftResult.stdout
+
+    // tbfast: initial alignment → writes to /shared/data/pre
+    await cli.exec(`tbfast ${TBFAST_PARAMS} -i ${inputName}`)
+    // dvtditr: iterative refinement → reads/writes /shared/data/pre
+    await cli.exec(`dvtditr ${DVTDITR_PARAMS} -i /shared/data/pre`)
+    // Read aligned output
+    const alignedFasta = getStdout(await cli.exec('cat /shared/data/pre'))
 
     // Parse the aligned output
     const alignedContigs = parseFastaString(alignedFasta)
@@ -142,7 +182,7 @@ export async function buildTree(
   onProgress('Building phylogenetic tree...', 80)
   await cli.mount({ name: 'concat.fasta', data: concatenatedFasta })
   const ftResult = await cli.exec('fasttree -nt concat.fasta')
-  const newick = typeof ftResult === 'string' ? ftResult : ftResult.stdout
+  const newick = getStdout(ftResult)
 
   onProgress('Tree complete', 100)
   return newick.trim()

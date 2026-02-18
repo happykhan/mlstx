@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>mafft + fasttree biowasm test</title>
+  <script src="https://biowasm.com/cdn/v3/aioli.js"></script>
+  <style>
+    body { font-family: monospace; padding: 2rem; }
+    .step { margin: 1rem 0; padding: 0.5rem; border-left: 3px solid #ccc; }
+    .step.ok { border-left-color: green; }
+    .step.err { border-left-color: red; }
+    pre { background: #f5f5f5; padding: 1rem; overflow-x: auto; max-height: 300px; }
+  </style>
+</head>
+<body>
+  <h1>mafft + fasttree biowasm pipeline test</h1>
+  <div id="log"></div>
+
+  <script type="module">
+    const log = document.getElementById('log');
+    function step(id, msg, status) {
+      let el = document.getElementById(id);
+      if (!el) {
+        el = document.createElement('div');
+        el.id = id;
+        el.className = 'step';
+        log.appendChild(el);
+      }
+      el.className = 'step ' + (status || '');
+      el.innerHTML = msg;
+    }
+
+    try {
+      // Step 1: Initialize Aioli
+      step('s1', 'Initializing Aioli with mafft (tbfast, dvtditr), coreutils, fasttree...');
+      const version = '7.520';
+      const CLI = await new Aioli([
+        'coreutils/echo/8.32',
+        'coreutils/ls/8.32',
+        'coreutils/cat/8.32',
+        { tool: 'mafft', version, program: 'tbfast', reinit: false },
+        { tool: 'mafft', version, program: 'dvtditr', reinit: false },
+        'fasttree/2.1.11',
+      ], { printInterleaved: false, debug: true });
+      step('s1', 'Aioli initialized successfully', 'ok');
+
+      // Step 2: Mount test nucleotide sequences (3 short DNA seqs)
+      const testFasta = [
+        '>seq1', 'ATCGATCGATCGATCGATCG',
+        '>seq2', 'ATCGATCGATCGATCGAAAA',
+        '>seq3', 'GGCGATCGATCGATCGATCG',
+      ].join('\n') + '\n';
+
+      step('s2', 'Mounting input FASTA...');
+      await CLI.mount({ name: 'input.fa', data: testFasta });
+      step('s2', 'Input FASTA mounted', 'ok');
+
+      // Step 3: Run tbfast (E-INS-i mode)
+      step('s3', 'Running tbfast (initial alignment)...');
+      const tbfastResult = await CLI.exec(
+        'tbfast _ -u 0.0 -l 2.7 -C 0 -b 62 -g 0.0 -f -2.00 -Q 100.0 -h 0.0 -O -6.00 -E -0.000 -N -Z _ -+ 16 -W 0.00001 -V -1.53 -s 0.0 -O -C 0 -b 62 -f -1.53 -Q 100.0 -h 0.000 -l 2.7 -X 0.1 -i input.fa'
+      );
+      console.log('tbfast result:', tbfastResult);
+      step('s3', 'tbfast completed<pre>' + JSON.stringify(tbfastResult).slice(0, 500) + '</pre>', 'ok');
+
+      // Step 4: Run dvtditr (iterative refinement)
+      step('s4', 'Running dvtditr (iterative refinement)...');
+      const dvtditrResult = await CLI.exec(
+        'dvtditr -W 0.00001 -E 0.0 -s 0.0 -C 0 -t 0 -F -l 2.7 -z 50 -b 62 -f -1.53 -Q 100.0 -h 0.000 -I 16 -X 0.1 -p BAATARI2 -K 0 -i /shared/data/pre'
+      );
+      console.log('dvtditr result:', dvtditrResult);
+      step('s4', 'dvtditr completed<pre>' + JSON.stringify(dvtditrResult).slice(0, 500) + '</pre>', 'ok');
+
+      // Step 5: Read aligned output
+      step('s5', 'Reading aligned output from /shared/data/pre...');
+      const aligned = await CLI.exec('cat /shared/data/pre');
+      const alignedText = typeof aligned === 'string' ? aligned : aligned.stdout;
+      console.log('Aligned output:', alignedText);
+      step('s5', 'Aligned FASTA:<pre>' + alignedText + '</pre>', alignedText.includes('>') ? 'ok' : 'err');
+
+      // Step 6: Run FastTree on the aligned sequences
+      step('s6', 'Mounting aligned sequences and running FastTree...');
+      await CLI.mount({ name: 'aligned.fasta', data: alignedText });
+      const ftResult = await CLI.exec('fasttree -nt aligned.fasta');
+      const newick = typeof ftResult === 'string' ? ftResult : ftResult.stdout;
+      console.log('FastTree result:', newick);
+      step('s6', 'Newick tree:<pre>' + newick + '</pre>', newick.includes('(') ? 'ok' : 'err');
+
+      // Summary
+      step('summary', '<h2>All steps completed successfully!</h2><p>Newick: <code>' + newick.trim() + '</code></p>', 'ok');
+
+    } catch (err) {
+      step('error', '<h2>ERROR</h2><pre>' + err.message + '\n' + err.stack + '</pre>', 'err');
+      console.error(err);
+    }
+  </script>
+</body>
+</html>
