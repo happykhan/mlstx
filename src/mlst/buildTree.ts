@@ -164,12 +164,25 @@ export async function buildTree(
     const inputName = `locus_${locus}.fasta`
     await cli.mount({ name: inputName, data: inputFasta })
 
+    // Clean up /shared/data/pre from previous locus run
+    try {
+      await cli.fs('unlink', '/shared/data/pre')
+    } catch {
+      // File may not exist on first run — that's fine
+    }
+
     // tbfast: initial alignment → writes to /shared/data/pre
     log(`[${locus}] Running tbfast...`)
-    await cli.exec(`tbfast ${TBFAST_PARAMS} -i ${inputName}`)
+    const tbResult = await cli.exec(`tbfast ${TBFAST_PARAMS} -i ${inputName}`)
+    const tbStderr = typeof tbResult === 'object' && tbResult.stderr ? tbResult.stderr : ''
+    if (tbStderr) log(`[${locus}] tbfast stderr: ${tbStderr.slice(0, 200)}`)
+
     // dvtditr: iterative refinement → reads/writes /shared/data/pre
     log(`[${locus}] Running dvtditr (iterative refinement)...`)
-    await cli.exec(`dvtditr ${DVTDITR_PARAMS} -i /shared/data/pre`)
+    const dvResult = await cli.exec(`dvtditr ${DVTDITR_PARAMS} -i /shared/data/pre`)
+    const dvStderr = typeof dvResult === 'object' && dvResult.stderr ? dvResult.stderr : ''
+    if (dvStderr) log(`[${locus}] dvtditr stderr: ${dvStderr.slice(0, 200)}`)
+
     // Read aligned output
     log(`[${locus}] Reading aligned output...`)
     const alignedFasta = getStdout(await cli.exec('cat /shared/data/pre'))
