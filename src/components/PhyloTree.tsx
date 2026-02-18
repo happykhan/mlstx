@@ -1,5 +1,4 @@
 import { useRef, useEffect, useCallback } from 'react'
-import { phylotree } from 'phylotree'
 
 interface PhyloTreeProps {
   newick: string
@@ -8,40 +7,55 @@ interface PhyloTreeProps {
 
 export function PhyloTree({ newick, alignment }: PhyloTreeProps) {
   const containerRef = useRef<HTMLDivElement>(null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const treeRef = useRef<any>(null)
 
   useEffect(() => {
     if (!containerRef.current || !newick) return
 
-    // Clear previous tree
-    containerRef.current.innerHTML = ''
+    let cancelled = false
 
-    const tree = new phylotree(newick)
-    const rect = containerRef.current.getBoundingClientRect()
+    async function init() {
+      const { default: PhylocanvasGL } = await import(
+        '@phylocanvas/phylocanvas.gl'
+      )
+      if (cancelled || !containerRef.current) return
 
-    const display = tree.render({
-      container: containerRef.current,
-      width: rect.width || 800,
-      height: 500,
-      'left-right-spacing': 'fixed-step',
-      'top-bottom-spacing': 'fixed-step',
-      zoom: true,
-      'show-scale': true,
-      'show-labels': true,
-      brush: false,
-    })
+      if (treeRef.current) {
+        treeRef.current.destroy()
+      }
 
-    // phylotree.js creates a detached SVG — append it to the container
-    const svgNode = display.show()
-    if (svgNode && containerRef.current) {
-      containerRef.current.appendChild(svgNode)
+      const rect = containerRef.current.getBoundingClientRect()
+      treeRef.current = new PhylocanvasGL(containerRef.current, {
+        source: newick,
+        size: { width: rect.width || 800, height: 500 },
+        padding: 20,
+      })
     }
 
+    init()
+
     return () => {
-      if (containerRef.current) {
-        containerRef.current.innerHTML = ''
+      cancelled = true
+      if (treeRef.current) {
+        treeRef.current.destroy()
+        treeRef.current = null
       }
     }
   }, [newick])
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (treeRef.current && containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect()
+        treeRef.current.setProps({
+          size: { width: rect.width || 800, height: 500 },
+        })
+      }
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   const handleExportNewick = useCallback(() => {
     const blob = new Blob([newick], { type: 'text/plain' })

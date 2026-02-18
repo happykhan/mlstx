@@ -3,4 +3,12 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
+  esbuild: {
+    keepNames: true,
+  },
+  optimizeDeps: {
+    esbuildOptions: {
+      keepNames: true,
+    },
+  },
 })
