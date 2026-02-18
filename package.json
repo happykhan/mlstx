@@ -29,7 +29,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "fetch-db": "npx tsx scripts/fetch_pubmlst.ts"
+    "fetch-db": "npx tsx scripts/fetch_pubmlst.ts",
+    "check": "vitest run && eslint . && npm run build"
   },
   "dependencies": {
     "@phylocanvas/phylocanvas.gl": "^1.61.0",

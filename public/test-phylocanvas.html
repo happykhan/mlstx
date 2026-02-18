@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>phylocanvas.gl test</title>
+  <script src="https://unpkg.com/@phylocanvas/phylocanvas.gl@latest/dist/bundle.min.js"></script>
+  <style>
+    body { font-family: monospace; padding: 2rem; background: #1a1a2e; color: #e0e0e0; }
+    h1 { color: #64ffda; }
+    #tree { width: 800px; height: 500px; border: 1px solid #333; border-radius: 8px; background: #0d1117; }
+    .info { margin: 1rem 0; padding: 0.5rem; border-left: 3px solid #64ffda; }
+    pre { background: #0d1117; padding: 1rem; overflow-x: auto; border-radius: 4px; }
+    .ok { color: #4caf50; }
+    .err { color: #f44336; }
+  </style>
+</head>
+<body>
+  <h1>phylocanvas.gl standalone test</h1>
+  <div id="status"></div>
+  <div id="tree"></div>
+  <div id="log"></div>
+
+  <script>
+    const status = document.getElementById('status');
+    const log = document.getElementById('log');
+
+    const newick = '(Bovine:0.69395,(Gibbon:0.36079,(Orangutan:0.33636,(Gorilla:0.17147,(Chimp:1.19268,Human:0.11927):0.08386):0.06124):0.15057):0.54939,Mouse:1.21460);';
+
+    function addLog(msg, ok) {
+      const div = document.createElement('div');
+      div.className = 'info';
+      div.innerHTML = '<span class="' + (ok ? 'ok' : 'err') + '">[' + (ok ? 'OK' : 'ERR') + ']</span> ' + msg;
+      log.appendChild(div);
+    }
+
+    try {
+      addLog('phylocanvas global: ' + typeof phylocanvas, typeof phylocanvas === 'object');
+      addLog('PhylocanvasGL: ' + typeof phylocanvas.PhylocanvasGL, typeof phylocanvas.PhylocanvasGL === 'function');
+      addLog('TreeTypes: ' + JSON.stringify(phylocanvas.TreeTypes), !!phylocanvas.TreeTypes);
+
+      const tree = new phylocanvas.PhylocanvasGL(
+        document.querySelector('#tree'),
+        {
+          size: { width: 800, height: 500 },
+          source: newick,
+          type: phylocanvas.TreeTypes.Rectangular,
+          padding: 20,
+        }
+      );
+
+      addLog('Tree instance created successfully', true);
+      addLog('Newick: <pre>' + newick + '</pre>', true);
+      status.innerHTML = '<div class="info"><span class="ok">phylocanvas.gl is working!</span></div>';
+    } catch (err) {
+      addLog('Error: <pre>' + err.message + '\n' + err.stack + '</pre>', false);
+      status.innerHTML = '<div class="info"><span class="err">phylocanvas.gl FAILED: ' + err.message + '</span></div>';
+      console.error(err);
+    }
+  </script>
+</body>
+</html>

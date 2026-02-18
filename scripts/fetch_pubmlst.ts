@@ -157,7 +157,7 @@ function main() {
   }
 
   // Write schemes list (merge with existing if filtering)
-  let allSchemes = new Set(processed)
+  const allSchemes = new Set(processed)
   const schemesPath = path.join(OUTPUT_DIR, 'schemes.json')
   if (filterScheme && fs.existsSync(schemesPath)) {
     const existing: string[] = JSON.parse(fs.readFileSync(schemesPath, 'utf-8'))
