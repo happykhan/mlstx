@@ -1,4 +1,5 @@
 import { useRef, useEffect, useCallback } from 'react'
+import { phylotree } from 'phylotree'
 
 interface PhyloTreeProps {
   newick: string
@@ -6,55 +7,34 @@ interface PhyloTreeProps {
 
 export function PhyloTree({ newick }: PhyloTreeProps) {
   const containerRef = useRef<HTMLDivElement>(null)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const treeRef = useRef<any>(null)
 
   useEffect(() => {
     if (!containerRef.current || !newick) return
 
-    let cancelled = false
+    // Clear previous tree
+    containerRef.current.innerHTML = ''
 
-    async function init() {
-      const { default: PhylocanvasGL } = await import(
-        '@phylocanvas/phylocanvas.gl'
-      )
-      if (cancelled || !containerRef.current) return
+    const tree = new phylotree(newick)
+    const rect = containerRef.current.getBoundingClientRect()
 
-      if (treeRef.current) {
-        treeRef.current.destroy()
-      }
-
-      const rect = containerRef.current.getBoundingClientRect()
-      treeRef.current = new PhylocanvasGL(containerRef.current, {
-        source: newick,
-        size: { width: rect.width, height: 500 },
-        padding: 20,
-      })
-    }
-
-    init()
+    tree.render({
+      container: containerRef.current,
+      width: rect.width || 800,
+      height: 500,
+      'left-right-spacing': 'fixed-step',
+      'top-bottom-spacing': 'fixed-step',
+      zoom: true,
+      'show-scale': true,
+      'show-labels': true,
+      brush: false,
+    })
 
     return () => {
-      cancelled = true
-      if (treeRef.current) {
-        treeRef.current.destroy()
-        treeRef.current = null
+      if (containerRef.current) {
+        containerRef.current.innerHTML = ''
       }
     }
   }, [newick])
-
-  useEffect(() => {
-    const handleResize = () => {
-      if (treeRef.current && containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect()
-        treeRef.current.setProps({
-          size: { width: rect.width, height: 500 },
-        })
-      }
-    }
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
 
   const handleExportNewick = useCallback(() => {
     const blob = new Blob([newick], { type: 'text/plain' })

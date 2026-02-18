@@ -32,7 +32,7 @@
     "fetch-db": "npx tsx scripts/fetch_pubmlst.ts"
   },
   "dependencies": {
-    "@phylocanvas/phylocanvas.gl": "^1.61.0",
+    "phylotree": "^2.5.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
