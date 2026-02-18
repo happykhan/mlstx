@@ -8,6 +8,7 @@ import { parseFastaFile } from './mlst/parseFasta'
 import { runMLST } from './mlst/align'
 import { buildTree } from './mlst/buildTree'
 import { PhyloTree } from './components/PhyloTree'
+import { LogConsole } from './components/LogConsole'
 import type { MLSTResult, SchemeData } from './mlst/types'
 import './App.css'
 
@@ -29,10 +30,12 @@ function App() {
 
   // Tree state
   const [newick, setNewick] = useState('')
+  const [alignment, setAlignment] = useState('')
   const [treeBuilding, setTreeBuilding] = useState(false)
   const [treeProgress, setTreeProgress] = useState('')
   const [treeProgressPct, setTreeProgressPct] = useState(0)
   const [treeError, setTreeError] = useState('')
+  const [logLines, setLogLines] = useState<string[]>([])
 
   const [theme, setTheme] = useState<Theme>(() => {
     return (localStorage.getItem('mlstx-theme') as Theme) || 'light'
@@ -64,7 +67,9 @@ function App() {
     setError('')
     setResults([])
     setNewick('')
+    setAlignment('')
     setTreeError('')
+    setLogLines([])
     setProgress('Loading scheme data...')
     setProgressPct(0)
 
@@ -100,13 +105,23 @@ function App() {
     setTreeBuilding(true)
     setTreeError('')
     setNewick('')
+    setAlignment('')
+    setLogLines([])
 
     try {
-      const newickStr = await buildTree(results, schemeData, (msg, pct) => {
-        setTreeProgress(msg)
-        setTreeProgressPct(pct)
-      })
-      setNewick(newickStr)
+      const result = await buildTree(
+        results,
+        schemeData,
+        (msg, pct) => {
+          setTreeProgress(msg)
+          setTreeProgressPct(pct)
+        },
+        (msg) => {
+          setLogLines((prev) => [...prev, msg])
+        },
+      )
+      setNewick(result.newick)
+      setAlignment(result.alignment)
       setTreeProgress('')
     } catch (err) {
       setTreeError(err instanceof Error ? err.message : String(err))
@@ -250,7 +265,9 @@ function App() {
               </section>
             )}
 
-            {newick && <PhyloTree newick={newick} />}
+            {logLines.length > 0 && <LogConsole lines={logLines} />}
+
+            {newick && <PhyloTree newick={newick} alignment={alignment} />}
           </>
         ) : (
           <AboutPage />

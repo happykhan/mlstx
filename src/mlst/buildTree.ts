@@ -6,6 +6,12 @@ import { parseFastaString } from './parseFasta'
 declare const Aioli: any
 
 type ProgressCallback = (message: string, pct: number) => void
+type LogCallback = (message: string) => void
+
+export interface TreeResult {
+  newick: string
+  alignment: string
+}
 
 /**
  * Compute median allele length for each locus (used for gap filling).
@@ -91,7 +97,8 @@ export async function buildTree(
   results: MLSTResult[],
   schemeData: SchemeData,
   onProgress: ProgressCallback,
-): Promise<string> {
+  onLog?: LogCallback,
+): Promise<TreeResult> {
   if (results.length < 2) {
     throw new Error('Need at least 2 genomes to build a tree')
   }
@@ -100,7 +107,13 @@ export async function buildTree(
   const filenames = results.map((r) => r.filename)
   const mafftVersion = '7.520'
 
+  const log = (msg: string) => onLog?.(msg)
+
+  log('Starting tree building pipeline')
+  log(`Genomes: ${results.length}, Loci: ${loci.length}`)
+
   onProgress('Initializing mafft and FastTree...', 0)
+  log('Loading biowasm modules: mafft (tbfast, dvtditr), fasttree, coreutils/cat')
   const cli = await new Aioli(
     [
       'coreutils/cat/8.32',
@@ -120,6 +133,7 @@ export async function buildTree(
     ],
     { printInterleaved: false },
   )
+  log('Aioli initialized successfully')
 
   onProgress('Computing allele lengths...', 5)
   const medianLengths = computeMedianLengths(loci, schemeData.alleleFastas)
@@ -151,14 +165,18 @@ export async function buildTree(
     await cli.mount({ name: inputName, data: inputFasta })
 
     // tbfast: initial alignment → writes to /shared/data/pre
+    log(`[${locus}] Running tbfast...`)
     await cli.exec(`tbfast ${TBFAST_PARAMS} -i ${inputName}`)
     // dvtditr: iterative refinement → reads/writes /shared/data/pre
+    log(`[${locus}] Running dvtditr (iterative refinement)...`)
     await cli.exec(`dvtditr ${DVTDITR_PARAMS} -i /shared/data/pre`)
     // Read aligned output
+    log(`[${locus}] Reading aligned output...`)
     const alignedFasta = getStdout(await cli.exec('cat /shared/data/pre'))
 
     // Parse the aligned output
     const alignedContigs = parseFastaString(alignedFasta)
+    log(`[${locus}] Aligned ${alignedContigs.length} sequences (length: ${alignedContigs[0]?.sequence.length ?? 0})`)
     alignedPerLocus[locus] = {}
     for (const contig of alignedContigs) {
       alignedPerLocus[locus][contig.name] = contig.sequence
@@ -167,6 +185,7 @@ export async function buildTree(
 
   // Concatenate per-locus alignments
   onProgress('Concatenating alignments...', 75)
+  log('Concatenating per-locus alignments into super-alignment')
   const concatLines: string[] = []
   for (const filename of filenames) {
     const parts: string[] = []
@@ -177,13 +196,18 @@ export async function buildTree(
     concatLines.push(parts.join(''))
   }
   const concatenatedFasta = concatLines.join('\n') + '\n'
+  const totalLen = concatLines[1]?.length ?? 0
+  log(`Concatenated alignment: ${filenames.length} sequences x ${totalLen} bp`)
 
   // Run FastTree
   onProgress('Building phylogenetic tree...', 80)
+  log('Running FastTree (-nt) on concatenated alignment...')
   await cli.mount({ name: 'concat.fasta', data: concatenatedFasta })
   const ftResult = await cli.exec('fasttree -nt concat.fasta')
   const newick = getStdout(ftResult)
+  log(`FastTree complete. Newick length: ${newick.trim().length} chars`)
 
   onProgress('Tree complete', 100)
-  return newick.trim()
+  log('Pipeline finished successfully')
+  return { newick: newick.trim(), alignment: concatenatedFasta }
 }

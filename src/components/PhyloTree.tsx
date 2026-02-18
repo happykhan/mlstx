@@ -3,9 +3,10 @@ import { phylotree } from 'phylotree'
 
 interface PhyloTreeProps {
   newick: string
+  alignment?: string
 }
 
-export function PhyloTree({ newick }: PhyloTreeProps) {
+export function PhyloTree({ newick, alignment }: PhyloTreeProps) {
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -17,7 +18,7 @@ export function PhyloTree({ newick }: PhyloTreeProps) {
     const tree = new phylotree(newick)
     const rect = containerRef.current.getBoundingClientRect()
 
-    tree.render({
+    const display = tree.render({
       container: containerRef.current,
       width: rect.width || 800,
       height: 500,
@@ -28,6 +29,12 @@ export function PhyloTree({ newick }: PhyloTreeProps) {
       'show-labels': true,
       brush: false,
     })
+
+    // phylotree.js creates a detached SVG — append it to the container
+    const svgNode = display.show()
+    if (svgNode && containerRef.current) {
+      containerRef.current.appendChild(svgNode)
+    }
 
     return () => {
       if (containerRef.current) {
@@ -46,13 +53,31 @@ export function PhyloTree({ newick }: PhyloTreeProps) {
     URL.revokeObjectURL(url)
   }, [newick])
 
+  const handleExportAlignment = useCallback(() => {
+    if (!alignment) return
+    const blob = new Blob([alignment], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'mlstx_alignment.fasta'
+    a.click()
+    URL.revokeObjectURL(url)
+  }, [alignment])
+
   return (
     <section className="tree-section">
       <div className="tree-header">
         <h2>Phylogenetic Tree</h2>
-        <button className="export-button" onClick={handleExportNewick}>
-          Export Newick
-        </button>
+        <div className="results-actions">
+          <button className="export-button" onClick={handleExportNewick}>
+            Export Newick
+          </button>
+          {alignment && (
+            <button className="export-button" onClick={handleExportAlignment}>
+              Export MSA
+            </button>
+          )}
+        </div>
       </div>
       <div className="tree-container" ref={containerRef} />
     </section>
