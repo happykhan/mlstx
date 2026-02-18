@@ -77,16 +77,12 @@ function getStdout(result: unknown): string {
   return String(result)
 }
 
-// mafft tbfast parameters (E-INS-i mode, from biowasm docs)
-const TBFAST_PARAMS =
-  '_ -u 0.0 -l 2.7 -C 0 -b 62 -g 0.0 -f -2.00 -Q 100.0 -h 0.0 -O -6.00 -E -0.000 -N -Z _ -+ 16 -W 0.00001 -V -1.53 -s 0.0 -O -C 0 -b 62 -f -1.53 -Q 100.0 -h 0.000 -l 2.7 -X 0.1'
-
 /**
  * Build a phylogenetic tree from MLST results.
  *
  * Pipeline:
  * 1. Extract allele sequences for each genome per locus
- * 2. Run mafft (tbfast) per locus for multiple sequence alignment
+ * 2. Run muscle per locus for multiple sequence alignment
  * 3. Concatenate per-locus alignments into a super-alignment
  * 4. Run FastTree on the concatenated alignment
  * 5. Return the Newick tree string
@@ -103,26 +99,16 @@ export async function buildTree(
 
   const loci = schemeData.scheme.loci
   const filenames = results.map((r) => r.filename)
-  const mafftVersion = '7.520'
 
   const log = (msg: string) => onLog?.(msg)
 
   log('Starting tree building pipeline')
   log(`Genomes: ${results.length}, Loci: ${loci.length}`)
 
-  onProgress('Initializing mafft and FastTree...', 0)
-  log('Loading biowasm modules: mafft (tbfast), fasttree, coreutils/cat')
+  onProgress('Initializing muscle and FastTree...', 0)
+  log('Loading biowasm modules: muscle/5.1.0, fasttree/2.1.11')
   const cli = await new Aioli(
-    [
-      'coreutils/cat/8.32',
-      {
-        tool: 'mafft',
-        version: mafftVersion,
-        program: 'tbfast',
-        reinit: false,
-      },
-      'fasttree/2.1.11',
-    ],
+    ['muscle/5.1.0', 'fasttree/2.1.11'],
     { printInterleaved: false },
   )
   log('Aioli initialized successfully')
@@ -152,33 +138,31 @@ export async function buildTree(
     }
     const inputFasta = inputLines.join('\n') + '\n'
 
-    // Mount input and run mafft alignment
+    // Mount input and run muscle alignment
     const inputName = `locus_${locus}.fasta`
+    const outputName = `aligned_${locus}.fasta`
     await cli.mount({ name: inputName, data: inputFasta })
 
-    // Clean up mafft temp files from previous locus run
-    for (const tmpFile of ['pre', 'hat2', 'hat3', 'order']) {
-      try {
-        await cli.fs('unlink', `/shared/data/${tmpFile}`)
-      } catch {
-        // File may not exist — that's fine
-      }
-    }
+    log(`[${locus}] Running muscle...`)
+    const muscleResult = await cli.exec(
+      `muscle -align ${inputName} -output ${outputName}`,
+    )
+    const muscleStderr =
+      typeof muscleResult === 'object' && muscleResult.stderr
+        ? muscleResult.stderr
+        : ''
+    if (muscleStderr)
+      log(`[${locus}] muscle stderr (last 300): ${muscleStderr.slice(-300)}`)
 
-    // tbfast: alignment → writes to /shared/data/pre
-    log(`[${locus}] Running tbfast...`)
-    const tbResult = await cli.exec(`tbfast ${TBFAST_PARAMS} -i ${inputName}`)
-    const tbStderr = typeof tbResult === 'object' && tbResult.stderr ? tbResult.stderr : ''
-    if (tbStderr) log(`[${locus}] tbfast stderr (last 300): ${tbStderr.slice(-300)}`)
-
-    // Read aligned output directly from tbfast (skip dvtditr —
-    // iterative refinement is unnecessary for near-identical MLST alleles)
+    // Read aligned output
     log(`[${locus}] Reading aligned output...`)
-    const alignedFasta = getStdout(await cli.exec('cat /shared/data/pre'))
+    const alignedFasta = await cli.cat(outputName)
 
     // Parse the aligned output
     const alignedContigs = parseFastaString(alignedFasta)
-    log(`[${locus}] Aligned ${alignedContigs.length} sequences (length: ${alignedContigs[0]?.sequence.length ?? 0})`)
+    log(
+      `[${locus}] Aligned ${alignedContigs.length} sequences (length: ${alignedContigs[0]?.sequence.length ?? 0})`,
+    )
     alignedPerLocus[locus] = {}
     for (const contig of alignedContigs) {
       alignedPerLocus[locus][contig.name] = contig.sequence
