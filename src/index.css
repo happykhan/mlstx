@@ -1,104 +1,171 @@
+/* GenomicX Design Tokens — imported from front-end-template */
+
 *,
 *::before,
 *::after {
+  margin: 0;
+  padding: 0;
   box-sizing: border-box;
 }
 
 :root {
-  /* Light theme — teal/cyan palette */
-  --color-bg: #fafbfc;
-  --color-bg-secondary: #ffffff;
-  --color-bg-tertiary: #f0f4f8;
-  --color-bg-hover: #e8f0f6;
-  --color-text: #1a2332;
-  --color-text-secondary: #3d4f5f;
-  --color-text-muted: #6b7f8e;
-  --color-border: #d8e2ea;
-  --color-border-dashed: #b8c9d4;
-  --color-primary: #0d9488;
-  --color-primary-hover: #0f766e;
-  --color-primary-disabled: #7dd3c8;
-  --color-primary-subtle: #f0fdfa;
-  --color-primary-light: #14b8a6;
-  --color-accent: #06b6d4;
-  --color-success: #059669;
-  --color-success-hover: #047857;
-  --color-error-bg: #fef2f2;
-  --color-error-border: #fecaca;
-  --color-error-text: #dc2626;
-  --color-exact-bg: #ecfdf5;
-  --color-exact: #059669;
-  --color-exact-border: #a7f3d0;
-  --color-novel-bg: #fffbeb;
-  --color-novel: #b45309;
-  --color-novel-border: #fde68a;
-  --color-nohit-bg: #fef2f2;
-  --color-nohit: #dc2626;
-  --color-nohit-border: #fecaca;
-  --color-missing: #94a3b8;
-  --color-progress-bg: #e2e8f0;
-  --color-shadow: rgba(15, 23, 42, 0.06);
-  --color-shadow-md: rgba(15, 23, 42, 0.1);
-  --color-input-bg: #ffffff;
-  --color-input-border: #cbd5e1;
-  --color-tag-bg: #f0fdfa;
-  --color-tag-text: #115e59;
-  --color-tag-border: #99f6e4;
-  --gradient-primary: linear-gradient(135deg, #0d9488 0%, #06b6d4 100%);
-  --gradient-bg: linear-gradient(135deg, #f0fdfa 0%, #ecfeff 50%, #f0f9ff 100%);
+  /* --- Shared (theme-independent) --- */
+  --gx-accent:       #14B8A6;
+  --gx-accent-hover: #2DD4BF;
+  --gx-indigo:       #6366F1;
+  --gx-success:      #14B8A6;
+  --gx-warning:      #F59E0B;
+  --gx-error:        #EF4444;
+
+  --gx-radius:       8px;
+  --gx-radius-lg:    12px;
+  --gx-radius-sm:    4px;
+  --gx-radius-pill:  999px;
+  --gx-transition:   0.2s ease;
+  --gx-max-width:    1080px;
+  --gx-nav-height:   60px;
+
+  --gx-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --gx-font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  --gx-space-1:  0.25rem;
+  --gx-space-2:  0.5rem;
+  --gx-space-3:  0.75rem;
+  --gx-space-4:  1rem;
+  --gx-space-6:  1.5rem;
+  --gx-space-8:  2rem;
 }
 
-[data-theme='dark'] {
-  --color-bg: #0c1222;
-  --color-bg-secondary: #141e33;
-  --color-bg-tertiary: #1c2a42;
-  --color-bg-hover: #1e3048;
-  --color-text: #e8edf3;
-  --color-text-secondary: #b0bec8;
-  --color-text-muted: #7a8f9e;
-  --color-border: #243244;
-  --color-border-dashed: #344a60;
-  --color-primary: #2dd4bf;
-  --color-primary-hover: #5eead4;
-  --color-primary-disabled: #134e4a;
-  --color-primary-subtle: #0d2d2a;
-  --color-primary-light: #5eead4;
-  --color-accent: #22d3ee;
-  --color-success: #34d399;
-  --color-success-hover: #6ee7b7;
-  --color-error-bg: #2d0f0f;
-  --color-error-border: #5c1a1a;
-  --color-error-text: #fca5a5;
-  --color-exact-bg: #052e1c;
-  --color-exact: #4ade80;
-  --color-exact-border: #166534;
-  --color-novel-bg: #2d1f04;
-  --color-novel: #fbbf24;
-  --color-novel-border: #854d0e;
-  --color-nohit-bg: #2d0f0f;
-  --color-nohit: #f87171;
-  --color-nohit-border: #7f1d1d;
-  --color-missing: #4b5e6d;
-  --color-progress-bg: #1c2a42;
-  --color-shadow: rgba(0, 0, 0, 0.3);
-  --color-shadow-md: rgba(0, 0, 0, 0.4);
-  --color-input-bg: #1c2a42;
-  --color-input-border: #344a60;
-  --color-tag-bg: #0d2d2a;
-  --color-tag-text: #5eead4;
-  --color-tag-border: #134e4a;
-  --gradient-primary: linear-gradient(135deg, #2dd4bf 0%, #22d3ee 100%);
-  --gradient-bg: linear-gradient(135deg, #0c1222 0%, #0f1a2e 50%, #0c1222 100%);
+/* --- DARK THEME (default) --- */
+:root,
+[data-theme="dark"] {
+  --gx-bg:            #0F172A;
+  --gx-bg-alt:        #1E293B;
+  --gx-bg-elevated:   #253349;
+  --gx-text:          #E2E8F0;
+  --gx-text-muted:    #94A3B8;
+  --gx-text-bright:   #F1F5F9;
+  --gx-border:        #334155;
+  --gx-accent-dim:    rgba(20, 184, 166, 0.1);
+  --gx-accent-15:     rgba(20, 184, 166, 0.15);
+  --gx-indigo-dim:    rgba(99, 102, 241, 0.1);
+  --gx-nav-bg:        rgba(15, 23, 42, 0.9);
+  --gx-code-bg:       #0F172A;
+  --gx-shadow:        0 1px 3px rgba(0, 0, 0, 0.3);
+  --gx-shadow-md:     0 4px 12px rgba(0, 0, 0, 0.4);
+  color-scheme: dark;
+
+  /* App-specific: allele badges */
+  --gx-exact-bg:      #052e1c;
+  --gx-exact:         #4ade80;
+  --gx-exact-border:  #166534;
+  --gx-novel-bg:      #2d1f04;
+  --gx-novel:         #fbbf24;
+  --gx-novel-border:  #854d0e;
+  --gx-nohit-bg:      #2d0f0f;
+  --gx-nohit:         #f87171;
+  --gx-nohit-border:  #7f1d1d;
+  --gx-missing:       #4b5e6d;
+  --gx-tag-bg:        #0d2d2a;
+  --gx-tag-text:      #5eead4;
+  --gx-tag-border:    #134e4a;
+  --gx-gradient:      linear-gradient(135deg, #2dd4bf 0%, #22d3ee 100%);
+}
+
+/* --- LIGHT THEME --- */
+[data-theme="light"] {
+  --gx-bg:            #FFFFFF;
+  --gx-bg-alt:        #F8FAFC;
+  --gx-bg-elevated:   #F1F5F9;
+  --gx-text:          #334155;
+  --gx-text-muted:    #64748B;
+  --gx-text-bright:   #0F172A;
+  --gx-border:        #E2E8F0;
+  --gx-accent-dim:    rgba(20, 184, 166, 0.08);
+  --gx-accent-15:     rgba(20, 184, 166, 0.12);
+  --gx-indigo-dim:    rgba(99, 102, 241, 0.08);
+  --gx-nav-bg:        rgba(255, 255, 255, 0.9);
+  --gx-code-bg:       #F1F5F9;
+  --gx-shadow:        0 1px 3px rgba(0, 0, 0, 0.08);
+  --gx-shadow-md:     0 4px 12px rgba(0, 0, 0, 0.1);
+  color-scheme: light;
+
+  /* App-specific: allele badges */
+  --gx-exact-bg:      #ecfdf5;
+  --gx-exact:         #059669;
+  --gx-exact-border:  #a7f3d0;
+  --gx-novel-bg:      #fffbeb;
+  --gx-novel:         #b45309;
+  --gx-novel-border:  #fde68a;
+  --gx-nohit-bg:      #fef2f2;
+  --gx-nohit:         #dc2626;
+  --gx-nohit-border:  #fecaca;
+  --gx-missing:       #94a3b8;
+  --gx-tag-bg:        #f0fdfa;
+  --gx-tag-text:      #115e59;
+  --gx-tag-border:    #99f6e4;
+  --gx-gradient:      linear-gradient(135deg, #0d9488 0%, #06b6d4 100%);
+}
+
+/* --- System preference auto-detection --- */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    --gx-bg:            #FFFFFF;
+    --gx-bg-alt:        #F8FAFC;
+    --gx-bg-elevated:   #F1F5F9;
+    --gx-text:          #334155;
+    --gx-text-muted:    #64748B;
+    --gx-text-bright:   #0F172A;
+    --gx-border:        #E2E8F0;
+    --gx-accent-dim:    rgba(20, 184, 166, 0.08);
+    --gx-accent-15:     rgba(20, 184, 166, 0.12);
+    --gx-indigo-dim:    rgba(99, 102, 241, 0.08);
+    --gx-nav-bg:        rgba(255, 255, 255, 0.9);
+    --gx-code-bg:       #F1F5F9;
+    --gx-shadow:        0 1px 3px rgba(0, 0, 0, 0.08);
+    --gx-shadow-md:     0 4px 12px rgba(0, 0, 0, 0.1);
+    color-scheme: light;
+    --gx-exact-bg:      #ecfdf5;
+    --gx-exact:         #059669;
+    --gx-exact-border:  #a7f3d0;
+    --gx-novel-bg:      #fffbeb;
+    --gx-novel:         #b45309;
+    --gx-novel-border:  #fde68a;
+    --gx-nohit-bg:      #fef2f2;
+    --gx-nohit:         #dc2626;
+    --gx-nohit-border:  #fecaca;
+    --gx-missing:       #94a3b8;
+    --gx-tag-bg:        #f0fdfa;
+    --gx-tag-text:      #115e59;
+    --gx-tag-border:    #99f6e4;
+    --gx-gradient:      linear-gradient(135deg, #0d9488 0%, #06b6d4 100%);
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  margin: 0;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  line-height: 1.6;
-  color: var(--color-text);
-  background: var(--gradient-bg);
-  background-attachment: fixed;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  transition: background-color 0.3s, color 0.3s;
+  font-family: var(--gx-font-sans);
+  background: var(--gx-bg);
+  color: var(--gx-text);
+  line-height: 1.7;
+  font-size: 1rem;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+a {
+  color: var(--gx-accent);
+  text-decoration: none;
+  transition: color var(--gx-transition);
+}
+
+a:hover {
+  color: var(--gx-accent-hover);
 }
